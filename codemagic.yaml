@@ -19,9 +19,14 @@ workflows:
           # The following command builds a release IPA without code signing
           # Once you have an Apple Developer account, you can add code signing credentials
           # in Codemagic and use `--export-options-plist` or automatic signing.
-          flutter build ipa --release --no-codesign
+          flutter build ios --release --no-codesign
+          # Manually package the unsigned app into an .ipa file
+          mkdir -p build/ios/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/Payload
+          cd build/ios
+          zip -qr app-release.ipa Payload
     artifacts:
-      - build/ios/ipa/*.ipa
+      - build/ios/app-release.ipa
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
     publishing:
