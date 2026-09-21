@@ -1,0 +1,23 @@
+{
+  "kit_id": "marquis",
+  "kit_name": "Marquis Reagent",
+  "version": "1.0",
+  "last_updated": "2024-01-15",
+  "hsv_scale": "conventional_360_100_100",
+  "references": [
+    {
+      "substance": "MDMA",
+      "color_hsv": [300, 80, 50],
+      "hsv_tolerance": [15, 10, 15],
+      "lab_reference": [25.3, 18.2, -22.1],
+      "color_hex": "#4B0082"
+    },
+    {
+      "substance": "Amphetamine",
+      "color_hsv": [20, 90, 80],
+      "hsv_tolerance": [15, 15, 15],
+      "lab_reference": [48.1, 35.0, 42.5],
+      "color_hex": "#FF4500"
+    }
+  ]
+}

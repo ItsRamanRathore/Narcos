@@ -1,0 +1,13 @@
+{
+  "kit_id": "marquis",
+  "model_version": "1.0.0",
+  "input_type": "uint8",
+  "input_shape": [1, 224, 224, 3],
+  "classes": [
+    {"id": 0, "substance": "MDMA"},
+    {"id": 1, "substance": "Amphetamine"},
+    {"id": 2, "substance": "Methamphetamine"},
+    {"id": 3, "substance": "Heroin"},
+    {"id": 4, "substance": "Negative"}
+  ]
+}

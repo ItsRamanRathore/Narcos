@@ -1,0 +1,45 @@
+{
+  "kitId": "kit_v1",
+  "classes": [
+    {
+      "index": 0,
+      "substance": "Cocaine"
+    },
+    {
+      "index": 1,
+      "substance": "MDMA"
+    },
+    {
+      "index": 2,
+      "substance": "Methamphetamine"
+    },
+    {
+      "index": 3,
+      "substance": "Heroin"
+    },
+    {
+      "index": 4,
+      "substance": "Fentanyl"
+    },
+    {
+      "index": 5,
+      "substance": "LSD"
+    },
+    {
+      "index": 6,
+      "substance": "Ketamine"
+    },
+    {
+      "index": 7,
+      "substance": "Psilocybin"
+    },
+    {
+      "index": 8,
+      "substance": "Amphetamine"
+    },
+    {
+      "index": 9,
+      "substance": "Oxycodone"
+    }
+  ]
+}
