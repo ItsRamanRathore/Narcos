@@ -24,17 +24,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/login',
-        builder: (context, state) => const PopScope(
-          canPop: false,
-          child: LoginScreen(),
-        ),
+        builder: (context, state) => LoginScreen(),
       ),
       GoRoute(
         path: '/registration',
-        builder: (context, state) => const PopScope(
-          canPop: false,
-          child: RegistrationScreen(),
-        ),
+        builder: (context, state) => RegistrationScreen(),
       ),
       GoRoute(
         path: '/inactivity_lock',

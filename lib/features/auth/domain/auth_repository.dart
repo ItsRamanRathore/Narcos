@@ -183,6 +183,103 @@ class AuthRepository {
     }
   }
 
+  /// Changes the operator's PIN, which requires re-deriving all keys and re-encrypting the private key.
+  Future<Uint8List> changePin({
+    required String operatorId,
+    required String oldPin,
+    required String newPin,
+  }) async {
+    final db = await _dbService.database;
+
+    // 1. Verify old PIN
+    final oldWrapKey = await login(operatorId, oldPin);
+
+    // 2. Read wrapped private key
+    final wrappedData = await _secureStorage.getWrappedPrivateKey(operatorId);
+    if (wrappedData == null) {
+      throw Exception('Private key not found for operator');
+    }
+    
+    // 3. Decrypt private key
+    final privateKeyBytes = CryptoUtils.aesGcmDecrypt(
+      wrappedData.$1, 
+      oldWrapKey, 
+      wrappedData.$2,
+    );
+
+    // 4. Generate new salts
+    final newPinSalt = CryptoUtils.generateSalt();
+    final newWrapSalt = CryptoUtils.generateSalt();
+    final newRecoverySalt = CryptoUtils.generateSalt();
+
+    // 5. Derive new keys
+    final newPinHash = await CryptoUtils.deriveKey(newPin, newPinSalt);
+    final newWrapKey = await CryptoUtils.deriveKey(newPin, newWrapSalt);
+    final newRecoveryKey = await CryptoUtils.deriveKey(newPin, newRecoverySalt);
+
+    // 6. Re-encrypt private key with new wrap key
+    final (newWrappedPrivateKey, newWrapIv) = CryptoUtils.aesGcmEncrypt(privateKeyBytes, newWrapKey);
+
+    // 7. Re-encrypt wrap key with new recovery key (Escrow)
+    final (newEncryptedWrapKey, newRecoveryIv) = CryptoUtils.aesGcmEncrypt(newWrapKey, newRecoveryKey);
+
+    // 8. Fetch existing public key
+    final credsResult = await db.query('keys', where: 'operator_id = ?', whereArgs: [operatorId]);
+    if (credsResult.isEmpty) throw Exception('Public key not found');
+    final publicKeyJwk = credsResult.first['public_key_jwk'] as String;
+
+    // 9. Store new wrapped private key in secure storage
+    await _secureStorage.storeWrappedPrivateKey(
+      operatorId: operatorId,
+      wrappedKey: newWrappedPrivateKey,
+      iv: newWrapIv,
+    );
+
+    // 10. Update DB
+    await db.transaction((txn) async {
+      await txn.update(
+        'credentials',
+        {
+          'pin_hash': newPinHash,
+          'pin_salt': newPinSalt,
+          'wrap_salt': newWrapSalt,
+          'recovery_salt': newRecoverySalt,
+        },
+        where: 'operator_id = ?',
+        whereArgs: [operatorId],
+      );
+
+      // Queue new Escrow Upload
+      final escrowPayload = jsonEncode({
+        'operator_id': operatorId,
+        'recovery_salt': base64Encode(newRecoverySalt),
+        'recovery_iv': base64Encode(newRecoveryIv),
+        'encrypted_wrap_key': base64Encode(newEncryptedWrapKey),
+        'public_key_jwk': publicKeyJwk,
+      });
+      
+      await txn.insert('sync_queue', {
+        'id': const Uuid().v4(),
+        'type': 'key_escrow',
+        'payload': escrowPayload,
+        'queued_at': DateTime.now().millisecondsSinceEpoch,
+        'status': 'pending',
+        'attempts': 0,
+      });
+    });
+
+    await _secureStorage.setEscrowUploaded(operatorId, false);
+    
+    // Also re-enroll biometrics if enabled
+    final biometricKey = await _secureStorage.getBiometricWrapKey(operatorId);
+    if (biometricKey != null) {
+      await _secureStorage.clearBiometricWrapKey(operatorId);
+      // We don't have the context to prompt user here, so we clear it. The user has to re-enable it manually.
+    }
+
+    return newWrapKey;
+  }
+
   /// Helper to prevent timing attacks when comparing hashes
   bool _constantTimeCompare(Uint8List a, Uint8List b) {
     if (a.length != b.length) return false;

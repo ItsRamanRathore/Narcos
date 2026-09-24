@@ -20,14 +20,15 @@ class SecureStorageService {
   /// Retrieves the shared DB key or creates it if it doesn't exist
   Future<String> getOrCreateDbKey(String Function() dbKeyGenerator) async {
     const key = 'narcos_db_key';
-    final storedKey = await _storage.read(key: key);
+    const aOptions = AndroidOptions();
+    final storedKey = await _storage.read(key: key, aOptions: aOptions);
     if (storedKey != null) {
       return storedKey;
     }
     
     // Create new key
     final newKey = dbKeyGenerator();
-    await _storage.write(key: key, value: newKey);
+    await _storage.write(key: key, value: newKey, aOptions: aOptions);
     return newKey;
   }
 
@@ -38,19 +39,23 @@ class SecureStorageService {
     required Uint8List wrappedKey,
     required Uint8List iv,
   }) async {
+    const aOptions = AndroidOptions();
     await _storage.write(
       key: 'wrapped_private_key_$operatorId',
       value: base64Encode(wrappedKey),
+      aOptions: aOptions,
     );
     await _storage.write(
       key: 'wrap_iv_$operatorId',
       value: base64Encode(iv),
+      aOptions: aOptions,
     );
   }
 
   Future<(Uint8List, Uint8List)?> getWrappedPrivateKey(String operatorId) async {
-    final wrappedStr = await _storage.read(key: 'wrapped_private_key_$operatorId');
-    final ivStr = await _storage.read(key: 'wrap_iv_$operatorId');
+    const aOptions = AndroidOptions();
+    final wrappedStr = await _storage.read(key: 'wrapped_private_key_$operatorId', aOptions: aOptions);
+    final ivStr = await _storage.read(key: 'wrap_iv_$operatorId', aOptions: aOptions);
     
     if (wrappedStr == null || ivStr == null) return null;
     
@@ -63,6 +68,16 @@ class SecureStorageService {
     final canAuthenticate = await _localAuth.canCheckBiometrics || await _localAuth.isDeviceSupported();
     if (!canAuthenticate) return false;
 
+    // Prompt user to verify biometrics before enrolling
+    try {
+      final authenticated = await _localAuth.authenticate(
+        localizedReason: 'Verify biometrics to enable Biometric Unlock',
+      );
+      if (!authenticated) return false;
+    } catch (e) {
+      return false;
+    }
+
     // We store the wrap key in secure storage.
     // On iOS, we gate it at the OS level using accessibility settings.
     // On Android, we gate it manually via LocalAuthentication before reading.
@@ -71,8 +86,6 @@ class SecureStorageService {
       value: base64Encode(wrapKey),
       iOptions: const IOSOptions(
         accessibility: KeychainAccessibility.passcode,
-        // Using biometryCurrentSet equivalent in newer API
-        // This ensures if new fingerprints are added, this item is invalidated.
       ),
       aOptions: const AndroidOptions(),
     );
@@ -107,17 +120,42 @@ class SecureStorageService {
     return base64Decode(keyStr);
   }
 
+  Future<bool> hasBiometricWrapKey(String operatorId) async {
+    final keyStr = await _storage.read(
+      key: 'biometric_wrap_key_$operatorId',
+      iOptions: const IOSOptions(
+        accessibility: KeychainAccessibility.passcode,
+      ),
+      aOptions: const AndroidOptions(),
+    );
+    return keyStr != null;
+  }
+
+  Future<void> clearBiometricWrapKey(String operatorId) async {
+    const aOptions = AndroidOptions();
+    await _storage.delete(
+      key: 'biometric_wrap_key_$operatorId',
+      iOptions: const IOSOptions(
+        accessibility: KeychainAccessibility.passcode,
+      ),
+      aOptions: aOptions,
+    );
+  }
+
   // --- Escrow Status ---
 
   Future<void> setEscrowUploaded(String operatorId, bool status) async {
+    const aOptions = AndroidOptions();
     await _storage.write(
       key: 'narcos_escrow_uploaded_$operatorId',
       value: status.toString(),
+      aOptions: aOptions,
     );
   }
 
   Future<bool> isEscrowUploaded(String operatorId) async {
-    final val = await _storage.read(key: 'narcos_escrow_uploaded_$operatorId');
+    const aOptions = AndroidOptions();
+    final val = await _storage.read(key: 'narcos_escrow_uploaded_$operatorId', aOptions: aOptions);
     return val == 'true';
   }
 }

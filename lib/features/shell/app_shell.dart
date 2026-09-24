@@ -8,6 +8,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/widgets/offline_indicator.dart';
 import '../auth/providers/session_provider.dart';
 import '../dashboard/presentation/dashboard_screen.dart';
+import '../profile/presentation/profile_screen.dart';
+import '../records/presentation/screens/log_screen.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -141,6 +143,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (role == 'SUPERVISOR' || role == 'ADMIN') {
       base.add(_NavItem(icon: Icons.dashboard, label: 'Dashboard'));
     }
+    base.add(_NavItem(icon: Icons.person, label: 'Profile'));
     return base;
   }
 
@@ -171,12 +174,14 @@ class _AppShellState extends ConsumerState<AppShell> {
           ],
         ),
       ),
-      Center(child: Text('Log Screen Placeholder', style: Theme.of(context).textTheme.titleLarge)),
+      const LogScreen(),
     ];
 
     if (role == 'SUPERVISOR' || role == 'ADMIN') {
       base.add(const DashboardScreen());
     }
+    
+    base.add(const ProfileScreen());
 
     return base;
   }

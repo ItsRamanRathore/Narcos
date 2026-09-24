@@ -316,8 +316,37 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
         
         const SizedBox(height: 24),
         ElevatedButton(
-          onPressed: () {
-            // Placeholder for Part 07 Record construction
+          onPressed: () async {
+            final db = await DatabaseService().database;
+            final ts = DateTime.now().millisecondsSinceEpoch;
+            await db.insert('audit_log', {
+              'operator_id': 'UNKNOWN',
+              'action': 'detection_log_saved',
+              'detail': result.finalSubstance,
+              'created_at': ts,
+            });
+            await db.insert('records', {
+              'record_id': 'REC-\$ts',
+              'operator_id': 'UNKNOWN',
+              'operator_name': 'UNKNOWN',
+              'raw_json': '{}',
+              'result': result.finalSubstance,
+              'kit_used': _selectedKitId,
+              'confidence': (result.finalConfidence * 100).toInt(),
+              'is_inconclusive': result.isInconclusive ? 1 : 0,
+              'is_unknown': result.isUnknown ? 1 : 0,
+              'raw_image_hash': 'temp',
+              'calibrated_image_hash': 'temp',
+              'record_hash': 'temp',
+              'signature': 'temp',
+              'created_at': ts,
+            });
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Log saved successfully!')),
+              );
+              Navigator.pop(context);
+            }
           },
           child: const Text('Confirm & Proceed'),
         ),

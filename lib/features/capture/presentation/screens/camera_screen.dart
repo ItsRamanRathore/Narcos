@@ -127,7 +127,7 @@ class CameraScreen extends ConsumerWidget {
                           if (context.mounted) {
                             Navigator.of(context).pop(); // dismiss loading dialog
                             if (result.success) {
-                              context.go('/analysis', extra: result);
+                              context.push('/analysis', extra: result);
                             } else {
                               showDialog(
                                 context: context,

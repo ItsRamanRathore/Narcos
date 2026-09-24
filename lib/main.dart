@@ -53,14 +53,6 @@ void main() async {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
       
-      // WIPE CORRUPTED DB ON EMULATOR
-      try {
-        final dbPath = await sqflite.getDatabasesPath();
-        final path = [dbPath, 'narcos.db'].join('/');
-        await sqflite.deleteDatabase(path);
-      } catch (e) {
-        debugPrint('Could not delete db: \$e');
-      }
       
       DatabaseService.onDbOpen.add((db) async {
         if (_errorBuffer.isEmpty) return;

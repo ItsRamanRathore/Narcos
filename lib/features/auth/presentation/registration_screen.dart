@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/auth_repository.dart';
 import '../providers/session_provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:go_router/go_router.dart';
+import '../../../core/security/secure_storage_service.dart';
 
 class RegistrationScreen extends ConsumerStatefulWidget {
   const RegistrationScreen({super.key});
@@ -129,7 +129,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                 TextButton(
                   onPressed: () {
                     if (context.mounted) {
-                      context.go('/login');
+                      if(context.canPop()) { context.pop(); } else { context.go('/login'); };
                     }
                   },
                   child: const Text('Already have an account? Login'),
@@ -176,16 +176,41 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     try {
       final authRepo = AuthRepository();
       
+      final operatorId = _idController.text.toUpperCase();
       final wrapKey = await authRepo.registerOperator(
-        operatorId: _idController.text.toUpperCase(),
+        operatorId: operatorId,
         name: _nameController.text,
         rank: _rankController.text,
         jurisdiction: _jurisdictionController.text.toUpperCase(),
         pin: _pinController.text,
       );
 
+      final secureStorage = SecureStorageService();
+      if (mounted) {
+        final enroll = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Enable Biometric Login'),
+            content: const Text('Would you like to use biometrics to unlock the app in the future?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('No'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Yes'),
+              ),
+            ],
+          ),
+        );
+        if (enroll == true) {
+          await secureStorage.enrollBiometricWrapKey(operatorId, wrapKey);
+        }
+      }
+
       // Session established
-      await ref.read(sessionProvider.notifier).establishSession(_idController.text.toUpperCase(), wrapKey);
+      await ref.read(sessionProvider.notifier).establishSession(operatorId, wrapKey);
       
       // We will rebuild the app root because firstRunProvider will update (or auth state will change)
       // We also trigger a reload if needed, but sessionProvider should trigger router.

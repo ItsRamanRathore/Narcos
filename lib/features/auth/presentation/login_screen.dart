@@ -185,7 +185,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 TextButton(
                                   onPressed: () {
                                     if (context.mounted) {
-                                      context.go('/registration');
+                                      context.push('/registration');
                                     }
                                   },
                                   child: const Text("Don't have an account? Register"),
@@ -216,9 +216,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final authRepo = AuthRepository();
       final operatorId = _idController.text.toUpperCase();
       final wrapKey = await authRepo.login(operatorId, _pinController.text);
-      await ref.read(sessionProvider.notifier).establishSession(operatorId, wrapKey);
+      
       final secureStorage = SecureStorageService();
-      await secureStorage.enrollBiometricWrapKey(operatorId, wrapKey);
+      final hasKey = await secureStorage.hasBiometricWrapKey(operatorId);
+      
+      if (!hasKey && mounted) {
+        final enroll = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Enable Biometric Login'),
+            content: const Text('Would you like to use biometrics to unlock the app in the future?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('No'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Yes'),
+              ),
+            ],
+          ),
+        );
+        if (enroll == true) {
+          await secureStorage.enrollBiometricWrapKey(operatorId, wrapKey);
+        }
+      }
+      
+      await ref.read(sessionProvider.notifier).establishSession(operatorId, wrapKey);
     } catch (e) {
       setState(() => _errorMessage = e.toString());
     } finally {
